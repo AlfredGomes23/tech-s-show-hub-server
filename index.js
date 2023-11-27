@@ -32,8 +32,19 @@ async function run() {
 
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
-        //custom middlewares
 
+
+        //custom middlewares
+        const verifyToken = async (req, resp, next) => {
+            const token = req?.headers?.authorization.split(" ")[1];
+            if (!token) return resp.status(401).send({ message: 'Unauthorized Access' });
+
+            await jwt.verify(token, process.env.TOP_SECRET, (err, decoded) => {
+                if (err) return resp.status(401).send({ message: 'Unauthorized Access' });
+                else req.decoded = decoded;
+                next();
+            });
+        };
         //jwt
         app.post('/jwt', async (req, resp) => {
             const user = req?.body;
@@ -41,7 +52,7 @@ async function run() {
             resp.send({ token });
         });
         //get all users
-        app.get('/users', async (req, resp) => {
+        app.get('/users', verifyToken, async (req, resp) => {
             const result = await users.find().toArray();
             resp.send(result);
         });
@@ -59,7 +70,13 @@ async function run() {
             const result = await users.insertOne(user);
             resp.send(result);
         });
-
+        //get user role
+        //get all products
+        //get a product
+        //post a product
+        //update a product
+        //get all payments
+        //post a payment
 
 
 
