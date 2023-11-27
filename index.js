@@ -32,6 +32,7 @@ async function run() {
 
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
+        const products = client.db("tech's-show-hub").collection('products');
 
 
         //custom middlewares
@@ -53,6 +54,7 @@ async function run() {
         });
         //get all users
         app.get('/users', verifyToken, async (req, resp) => {
+            //TODO:verify admin
             const result = await users.find().toArray();
             resp.send(result);
         });
@@ -72,6 +74,10 @@ async function run() {
         });
         //get user role
         //get all products
+        app.get('/products', verifyToken, async (req, resp) => {
+            const result = await products.find().toArray();
+            resp.send(result);
+        });
         //get a product
         //post a product
         //update a product
