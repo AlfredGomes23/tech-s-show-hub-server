@@ -36,10 +36,18 @@ async function run() {
             const result = await users.find().toArray();
             resp.send(result);
         });
+        //check user or not
+        app.get('/user', async (req, resp) => {
+            const { email } = req.query;
+            const result = await users.findOne({ email: email });
+            if (result) resp.send({ isRegistered: true });
+            else
+                resp.send({isRegistered: false});
+        });
         //add/post a user
         app.post('/user', async (req, resp) => {
             const user = req.body;
-            const result = await users.insertOne(user);            
+            const result = await users.insertOne(user);
             resp.send(result);
         });
 
