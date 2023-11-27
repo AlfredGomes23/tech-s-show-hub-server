@@ -1,13 +1,16 @@
 const express = require('express');
 require('dotenv').config();                         //dotenv
 const cors = require('cors');                        //cors
-const port = process.env.PORT || 5000 ;
+const port = process.env.PORT || 5000;
 const app = express();
 const jwt = require('jsonwebtoken');                 //jwt
 
 //middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173'],
+    credentials: true
+}));
 
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
@@ -28,11 +31,18 @@ async function run() {
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
         //custom middlewares
-        //apis
+        //get all users
         app.get('/users', async (req, resp) => {
             const result = await users.find().toArray();
             resp.send(result);
         });
+        //add/post a user
+        app.post('/user', async (req, resp) => {
+            const user = req.body;
+            const result = await users.insertOne(user);            
+            resp.send(result);
+        });
+
 
 
 
