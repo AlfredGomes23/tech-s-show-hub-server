@@ -28,9 +28,18 @@ async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
+
+
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
         //custom middlewares
+
+        //jwt
+        app.post('/jwt', async (req, resp) => {
+            const user = req?.body;
+            const token = await jwt.sign(user, process.env.TOP_SECRET, { expiresIn: '1h' })
+            resp.send({ token });
+        });
         //get all users
         app.get('/users', async (req, resp) => {
             const result = await users.find().toArray();
@@ -42,7 +51,7 @@ async function run() {
             const result = await users.findOne({ email: email });
             if (result) resp.send({ isRegistered: true });
             else
-                resp.send({isRegistered: false});
+                resp.send({ isRegistered: false });
         });
         //add/post a user
         app.post('/user', async (req, resp) => {
