@@ -80,8 +80,13 @@ async function run() {
         });
         //get all products
         app.get('/products', async (req, resp) => {
-            const { page, limit } = req.query;
-            const result = await products.find().sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            const { page, limit, search } = req.query;
+
+            let result = await products.find({ tags: { $in: [search] } }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            
+            //if any of tag didn't matched then send all 
+            if (result.length === 0) result = await products.find().sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+
             resp.send(result);
         });
         //get a product
