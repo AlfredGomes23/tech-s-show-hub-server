@@ -13,7 +13,7 @@ app.use(cors({
 }));
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(process.env.DB_URI, {
@@ -37,7 +37,7 @@ async function run() {
 
         //custom middlewares
         const verifyToken = async (req, resp, next) => {
-            const token = req?.headers?.authorization.split(" ")[1];
+            const token = req?.headers?.authorization?.split(" ")[1];
             if (!token) return resp.status(401).send({ message: 'Unauthorized Access' });
 
             await jwt.verify(token, process.env.TOP_SECRET, (err, decoded) => {
@@ -74,9 +74,14 @@ async function run() {
         });
         //get user role
         //get all products
-        app.get('/products', verifyToken, async (req, resp) => {
-            const result = await products.find().toArray();
+        app.get('/products', async (req, resp) => {
+            const result = await products.find().sort({ posted: -1 }).toArray();
             resp.send(result);
+        });
+        //get products count
+        app.get('/productsCount', async (req, resp) => {
+            const count = await products.estimatedDocumentCount();
+            resp.send({count});
         });
         //get a product
         //post a product
