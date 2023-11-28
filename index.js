@@ -83,13 +83,19 @@ async function run() {
             const { page, limit, search } = req.query;
 
             let result = await products.find({ tags: { $in: [search] } }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
-            
+
             //if any of tag didn't matched then send all 
             if (result.length === 0) result = await products.find().sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
             resp.send(result);
         });
         //get a product
+        app.get('/product/:id', async (req, resp) => {
+            const id = req.params;
+            const result = await products.findOne({ _id: new ObjectId(id) });
+            console.log(result);
+            resp.send(result);
+        });
         //post a product
         //update a product
         //get all payments
