@@ -73,15 +73,16 @@ async function run() {
             resp.send(result);
         });
         //get user role
-        //get all products
-        app.get('/products', async (req, resp) => {
-            const result = await products.find().sort({ posted: -1 }).toArray();
-            resp.send(result);
-        });
         //get products count
         app.get('/productsCount', async (req, resp) => {
             const count = await products.estimatedDocumentCount();
-            resp.send({count});
+            resp.send({ count });
+        });
+        //get all products
+        app.get('/products', async (req, resp) => {
+            const { page, limit } = req.query;
+            const result = await products.find().sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            resp.send(result);
         });
         //get a product
         //post a product
