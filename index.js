@@ -98,6 +98,16 @@ async function run() {
         });
         //post a product
         //update a product
+        app.patch('/product/:id', verifyToken, async (req, resp) => {
+            const id = req.params;
+            const { email, vote } = req.query;
+            const result = await products.updateOne({ _id: new ObjectId(id) },
+                {
+                    $push: { [vote]: email }
+                });
+                console.log(result);
+            resp.send(result)
+        });
         //get all payments
         //post a payment
 
