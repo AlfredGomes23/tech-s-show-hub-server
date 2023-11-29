@@ -98,10 +98,10 @@ async function run() {
                     }
                 },
                 {//sort by count
-                    $sort: { upvoteCount : -1 }
+                    $sort: { upvoteCount: -1 }
                 },
                 {// remove counter from product object
-                    $project: { upvoteCount : 0 }
+                    $project: { upvoteCount: 0 }
                 }
             ]).limit(6).toArray();
             resp.send(result);
@@ -110,10 +110,16 @@ async function run() {
         app.get('/product/:id', async (req, resp) => {
             const id = req.params;
             const result = await products.findOne({ _id: new ObjectId(id) });
-            console.log(result);
+            // console.log(result);
             resp.send(result);
         });
         //post a product
+        app.post('/product', async (req, resp) => {
+            const product = req.body;
+            // console.log(product);
+            const result = await products.insertOne(product);
+            resp.send(result);
+        });
         //update a product
         app.patch('/product/:id', verifyToken, async (req, resp) => {
             const id = req.params;
@@ -122,8 +128,17 @@ async function run() {
                 {
                     $push: { [vote]: email }
                 });
-            console.log(result);
+            // console.log(result);
             resp.send(result)
+        });
+        //post a review
+        app.post('/review/:id', async (req, resp) => {
+            const id = req.params.id;
+            const { email, name, comment, rating } = req.body;
+            // console.log(id, email, name, comment, rating);
+            const result = await products.updateOne({ _id: new ObjectId(id) }, { $push: { "reviews": req.body } }
+            );
+            resp.send(result);
         });
         //get all payments
         //post a payment
