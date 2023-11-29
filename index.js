@@ -85,7 +85,7 @@ async function run() {
             let result = await products.find({ tags: { $in: [search] } }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
             //if any of tag didn't matched then send all 
-            if (result.length === 0) result = await products.find().sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            if (result.length === 0) result = await products.find({ "status": "accepted" }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
             resp.send(result);
         });
