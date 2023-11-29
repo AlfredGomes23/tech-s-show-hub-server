@@ -89,6 +89,23 @@ async function run() {
 
             resp.send(result);
         });
+        //get trading products
+        app.get('/products/trending', async (req, resp) => {
+            const result = await products.aggregate([
+                {//add counter field in each product
+                    $addFields: {
+                        upvoteCount: { $size: "$upvotes" }
+                    }
+                },
+                {//sort by count
+                    $sort: { upvoteCount : -1 }
+                },
+                {// remove counter from product object
+                    $project: { upvoteCount : 0 }
+                }
+            ]).limit(6).toArray();
+            resp.send(result);
+        });
         //get a product
         app.get('/product/:id', async (req, resp) => {
             const id = req.params;
@@ -105,7 +122,7 @@ async function run() {
                 {
                     $push: { [vote]: email }
                 });
-                console.log(result);
+            console.log(result);
             resp.send(result)
         });
         //get all payments
