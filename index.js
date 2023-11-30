@@ -131,7 +131,18 @@ async function run() {
             resp.send(result);
         });
         //update a product
-        app.patch('/product/:id', verifyToken, async (req, resp) => {
+        app.patch('/product/update/:id', async (req, resp) => {
+            const id = req.params.id;
+            const { name, image, tags, upvotes, downvotes, description, reviews, posted, link, ownerName, ownerPhotoURL, ownerEmail, featured, status } = req.body;
+
+            const update = {
+                $set: { name, image, tags, upvotes, downvotes, description, reviews, posted, link, ownerName, ownerPhotoURL, ownerEmail, featured, status }
+            };
+            const result = await products.updateOne({ _id: new ObjectId(id) }, update);
+            resp.send(result);
+        });
+        //update vote
+        app.patch('/product/vote/:id', verifyToken, async (req, resp) => {
             const id = req.params;
             const { email, vote } = req.query;
             const result = await products.updateOne({ _id: new ObjectId(id) },
