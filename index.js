@@ -124,7 +124,7 @@ async function run() {
             resp.send(result);
         });
         //post a product
-        app.post('/product', async (req, resp) => {
+        app.post('/product', verifyToken, async (req, resp) => {
             const product = req.body;
             // console.log(product);
             const result = await products.insertOne(product);
@@ -140,6 +140,12 @@ async function run() {
                 });
             // console.log(result);
             resp.send(result)
+        });
+        //delete a product
+        app.delete('/product/:id', async (req, resp) => {
+            const id = req.params.id;
+            const result = await products.deleteOne({ _id: new ObjectId(id) });
+            resp.send(result);
         });
         //post a review
         app.post('/review/:id', async (req, resp) => {
