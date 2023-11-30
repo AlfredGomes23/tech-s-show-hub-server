@@ -52,6 +52,8 @@ async function run() {
             const token = await jwt.sign(user, process.env.TOP_SECRET, { expiresIn: '1h' })
             resp.send({ token });
         });
+
+
         //get all users
         app.get('/users', verifyToken, async (req, resp) => {
             //TODO:verify admin
@@ -73,6 +75,8 @@ async function run() {
             resp.send(result);
         });
         //get user role
+
+
         //get products count
         app.get('/productsCount', async (req, resp) => {
             const count = await products.estimatedDocumentCount();
@@ -85,12 +89,18 @@ async function run() {
             let result = await products.find({ tags: { $in: [search] } }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
             //if any of tag didn't matched then send all 
-            if (result.length === 0) result = await products.find({ "status": "accepted" }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            if (result.length === 0) result = await products.find({ "status": "Accepted" }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
             resp.send(result);
         });
+        //get a users products
+        app.get('/products/:email', verifyToken, async (req, resp) => {
+            const email = req.params.email;
+            const result = await products.find({ "ownerEmail": email }).toArray();
+            resp.send(result);
+        });
         //get trading products
-        app.get('/products/trending', async (req, resp) => {
+        app.get('/trending', async (req, resp) => {
             const result = await products.aggregate([
                 {//add counter field in each product
                     $addFields: {
@@ -140,8 +150,10 @@ async function run() {
             );
             resp.send(result);
         });
+
+
         //get all payments
-        //post a payment
+        //intend a payment
 
 
 
