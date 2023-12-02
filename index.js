@@ -34,7 +34,7 @@ async function run() {
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
         const products = client.db("tech's-show-hub").collection('products');
-        const payments = client.db("tech's-show-hub").collection('payments');
+        const reports = client.db("tech's-show-hub").collection('reports');
 
 
         //custom middlewares
@@ -77,10 +77,14 @@ async function run() {
         });
         //get user role
         app.patch('/user', verifyToken, async (req, resp) => {
-            const { email, role } = req.body;
-            const result = await users.updateOne({ email: email }, { $set: { role: role } });
+            const { email, role, t_id } = req.body;
+            const result = await users.updateOne({ email: email }, {
+                $set: { role: role, t_id: t_id } 
+            });
             resp.send(result);
         });
+
+
         //get products count
         app.get('/productsCount', async (req, resp) => {
             const count = await products.estimatedDocumentCount();
@@ -171,10 +175,13 @@ async function run() {
             );
             resp.send(result);
         });
+        //post report
+        app.post('/report', async (req, resp) => {
+            const report = req.body;
+            const result = await reports.insertOne(report);
+            resp.send(result);
+        });
 
-
-        //post a payment
-       
         //intend a payment
         app.post('/payment-intent', async (req, resp) => {
             const amount = req.body.amount;
