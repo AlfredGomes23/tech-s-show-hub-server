@@ -3,7 +3,8 @@ require('dotenv').config();                         //dotenv
 const cors = require('cors');                        //cors
 const port = process.env.PORT || 5000;
 const app = express();
-const jwt = require('jsonwebtoken');                 //jwt
+const jwt = require('jsonwebtoken');                        //jwt
+const stripe = require('stripe')(process.env.SUPER_SECRET);                 //strip
 
 //middleware
 app.use(express.json());
@@ -33,6 +34,7 @@ async function run() {
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
         const products = client.db("tech's-show-hub").collection('products');
+        const payments = client.db("tech's-show-hub").collection('payments');
 
 
         //custom middlewares
@@ -75,8 +77,6 @@ async function run() {
             resp.send(result);
         });
         //get user role
-
-
         //get products count
         app.get('/productsCount', async (req, resp) => {
             const count = await products.estimatedDocumentCount();
@@ -169,8 +169,19 @@ async function run() {
         });
 
 
-        //get all payments
+        //check payments
         //intend a payment
+        app.post('/payment-intent', async (req, resp) => {
+            const amount = req.body.amount;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: parseInt(amount * 100),
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            resp.send({
+                clientSecret: paymentIntent.client_secret
+            });
+        });
 
 
 
