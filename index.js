@@ -62,13 +62,12 @@ async function run() {
             const result = await users.find().toArray();
             resp.send(result);
         });
-        //check user or not
+        //get a user
         app.get('/user', async (req, resp) => {
             const { email } = req.query;
             const result = await users.findOne({ email: email });
-            if (result) resp.send({ isRegistered: true });
-            else
-                resp.send({ isRegistered: false });
+            console.log(result);
+            resp.send(result);
         });
         //add/post a user
         app.post('/user', async (req, resp) => {
@@ -77,6 +76,11 @@ async function run() {
             resp.send(result);
         });
         //get user role
+        app.patch('/user', verifyToken, async (req, resp) => {
+            const { email, role } = req.body;
+            const result = await users.updateOne({ email: email }, { $set: { role: role } });
+            resp.send(result);
+        });
         //get products count
         app.get('/productsCount', async (req, resp) => {
             const count = await products.estimatedDocumentCount();
@@ -169,7 +173,8 @@ async function run() {
         });
 
 
-        //check payments
+        //post a payment
+       
         //intend a payment
         app.post('/payment-intent', async (req, resp) => {
             const amount = req.body.amount;
