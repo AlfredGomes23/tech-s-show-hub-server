@@ -87,12 +87,19 @@ async function run() {
             const result = await users.insertOne(user);
             resp.send(result);
         });
-        //update user role
+        //update user to subscriber
         app.patch('/user', verifyToken, async (req, resp) => {
             const { email, role, t_id } = req.body;
             const result = await users.updateOne({ email: email }, {
                 $set: { role: role, limit: 9999, t_id: t_id }
             });
+            resp.send(result);
+        });
+        //update user role
+        app.patch('/user/:id', verifyToken, isAdmin, async (req, resp) => {
+            const id = req.params.id;
+            const { role } = req.body;
+            const result = await users.updateOne({ _id: new ObjectId(id) }, { $set: { role: role } });
             resp.send(result);
         });
 
@@ -153,6 +160,10 @@ async function run() {
             resp.send(result);
         });
         //get all reported products
+        app.get('/reported-products', async (req, resp) => {
+            const result = await products.find({ "reported": true }).toArray();
+            resp.send(result)
+        });
         //post a product
         app.post('/product', verifyToken, async (req, resp) => {
             const product = req.body;
@@ -206,7 +217,7 @@ async function run() {
             const id = req.params.id;
             console.log(id);
             const result = await products.updateOne({ _id: new ObjectId(id) },
-                { $set: { "reported": "true" } });
+                { $set: { "reported": true } });
             resp.send(result);
         });
         //delete a product
@@ -221,7 +232,7 @@ async function run() {
 
 
         //intend a payment
-        app.post('/payment-intent', async (req, resp) => {
+        app.post('/payment-intent', verifyToken, async (req, resp) => {
             const amount = req.body.amount;
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: parseInt(amount * 100),
