@@ -50,7 +50,7 @@ async function run() {
         };
         const isModerator = async (req, resp, next) => {
             const { email } = req.decoded;
-            const {role} = await users.findOne({email:email});
+            const { role } = await users.findOne({ email: email });
             if (role === "Moderator") return resp.status(403).send({ message: 'Forbidden Access' });
             next();
         };
@@ -91,7 +91,7 @@ async function run() {
         app.patch('/user', verifyToken, async (req, resp) => {
             const { email, role, t_id } = req.body;
             const result = await users.updateOne({ email: email }, {
-                $set: { role: role, t_id: t_id }
+                $set: { role: role, limit: 9999, t_id: t_id }
             });
             resp.send(result);
         });
@@ -106,7 +106,11 @@ async function run() {
         app.get('/products', async (req, resp) => {
             const { page, limit, search } = req.query;
 
-            let result = await products.find({ tags: { $in: [search] } }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
+            let result = await products.find({ "status": "Accepted", tags: { $in: [search] } })
+                .sort({ posted: -1 })
+                .skip(+page * +limit)
+                .limit(+limit)
+                .toArray();
 
             //if any of tag didn't matched then send all 
             if (result.length === 0) result = await products.find({ "status": "Accepted" }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
@@ -138,9 +142,15 @@ async function run() {
         });
         //get a product
         app.get('/product/:id', async (req, resp) => {
-            const id = req.params;
+            const id = req.params.id;
+            console.log(id);
             const result = await products.findOne({ _id: new ObjectId(id) });
             // console.log(result);
+            resp.send(result);
+        });
+        //get pending products
+        app.get('/pending-products', async (req, resp) => {
+            const result = await products.find({ "status": "Pending" }).sort({ posted: -1 }).toArray();
             resp.send(result);
         });
         //post a product
@@ -148,15 +158,25 @@ async function run() {
             const product = req.body;
             // console.log(product);
             const result = await products.insertOne(product);
+            if (result) await users.updateOne({ email: product.ownerEmail }, { $inc: { limit: -1 } });
             resp.send(result);
         });
         //update a product
         app.patch('/product/update/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
-            const { name, image, tags, upvotes, downvotes, description, reviews, posted, link, ownerName, ownerPhotoURL, ownerEmail, featured, status } = req.body;
 
             const update = {
-                $set: { name, image, tags, upvotes, downvotes, description, reviews, posted, link, ownerName, ownerPhotoURL, ownerEmail, featured, status }
+                $set: req.body
+            };
+            const result = await products.updateOne({ _id: new ObjectId(id) }, update);
+            resp.send(result);
+        });
+        //update a pending product
+        app.patch('/pending-product/update/:id', verifyToken, isModerator, async (req, resp) => {
+            const id = req.params.id;
+
+            const update = {
+                $set: req.body
             };
             const result = await products.updateOne({ _id: new ObjectId(id) }, update);
             resp.send(result);
@@ -175,7 +195,10 @@ async function run() {
         //delete a product
         app.delete('/product/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
+            const { ownerEmail } = await products.findOne({ _id: new ObjectId(id) });
             const result = await products.deleteOne({ _id: new ObjectId(id) });
+            // console.log(ownerEmail, result);
+            if (result) await users.updateOne({ email: ownerEmail }, { $inc: { limit: 1 } });
             resp.send(result);
         });
         //post a review
