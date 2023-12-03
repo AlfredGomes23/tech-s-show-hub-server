@@ -54,6 +54,12 @@ async function run() {
             if (role === "Moderator") return resp.status(403).send({ message: 'Forbidden Access' });
             next();
         };
+        const isAdmin = async (req, resp, next) => {
+            const { email } = req.decoded;
+            const { role } = await users.findOne({ email: email });
+            if (role === "Admin") return resp.status(403).send({ message: 'Forbidden Access' });
+            next();
+        };
         //jwt
         app.post('/jwt', async (req, resp) => {
             const user = req?.body;
