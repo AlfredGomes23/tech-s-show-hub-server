@@ -51,13 +51,13 @@ async function run() {
         const isModerator = async (req, resp, next) => {
             const { email } = req.decoded;
             const { role } = await users.findOne({ email: email });
-            if (role === "Moderator") return resp.status(403).send({ message: 'Forbidden Access' });
+            if (role !== "Moderator") return resp.status(403).send({ message: 'Forbidden Access' });
             next();
         };
         const isAdmin = async (req, resp, next) => {
             const { email } = req.decoded;
             const { role } = await users.findOne({ email: email });
-            if (role === "Admin") return resp.status(403).send({ message: 'Forbidden Access' });
+            if (role !== "Admin") return resp.status(403).send({ message: 'Forbidden Access' });
             next();
         };
         //jwt
@@ -150,7 +150,7 @@ async function run() {
         });
         //get pending products
         app.get('/pending-products', async (req, resp) => {
-            const result = await products.find({ "status": "Pending" }).sort({ posted: -1 }).toArray();
+            const result = await products.find({ "status": { $in:["Pending", "Rejected"]} }).sort({ posted: -1 }).toArray();
             resp.send(result);
         });
         //post a product
