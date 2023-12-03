@@ -117,12 +117,6 @@ async function run() {
 
             resp.send(result);
         });
-        //get a users products
-        app.get('/products/:email', verifyToken, async (req, resp) => {
-            const email = req.params.email;
-            const result = await products.find({ "ownerEmail": email }).toArray();
-            resp.send(result);
-        });
         //get trading products
         app.get('/trending', async (req, resp) => {
             const result = await products.aggregate([
@@ -143,22 +137,37 @@ async function run() {
         //get a product
         app.get('/product/:id', async (req, resp) => {
             const id = req.params.id;
-            console.log(id);
             const result = await products.findOne({ _id: new ObjectId(id) });
             // console.log(result);
             resp.send(result);
         });
-        //get pending products
-        app.get('/pending-products', async (req, resp) => {
-            const result = await products.find({ "status": { $in:["Pending", "Rejected"]} }).sort({ posted: -1 }).toArray();
+        //get a users products
+        app.get('/products/:email', verifyToken, async (req, resp) => {
+            const email = req.params.email;
+            const result = await products.find({ "ownerEmail": email }).toArray();
             resp.send(result);
         });
+        //get pending products
+        app.get('/pending-products', async (req, resp) => {
+            const result = await products.find({ "status": { $in: ["Pending", "Rejected"] } }).sort({ posted: -1 }).toArray();
+            resp.send(result);
+        });
+        //get all reported products
         //post a product
         app.post('/product', verifyToken, async (req, resp) => {
             const product = req.body;
             // console.log(product);
             const result = await products.insertOne(product);
             if (result) await users.updateOne({ email: product.ownerEmail }, { $inc: { limit: -1 } });
+            resp.send(result);
+        });
+        //post a review
+        app.post('/review/:id', verifyToken, async (req, resp) => {
+            const id = req.params.id;
+            const { email, name, comment, rating } = req.body;
+            // console.log(id, email, name, comment, rating);
+            const result = await products.updateOne({ _id: new ObjectId(id) }, { $push: { "reviews": req.body } }
+            );
             resp.send(result);
         });
         //update a product
@@ -192,6 +201,14 @@ async function run() {
             // console.log(result);
             resp.send(result)
         });
+        //report a product
+        app.patch('/report/:id', verifyToken, async (req, resp) => {
+            const id = req.params.id;
+            console.log(id);
+            const result = await products.updateOne({ _id: new ObjectId(id) },
+                { $set: { "reported": "true" } });
+            resp.send(result);
+        });
         //delete a product
         app.delete('/product/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
@@ -201,21 +218,7 @@ async function run() {
             if (result) await users.updateOne({ email: ownerEmail }, { $inc: { limit: 1 } });
             resp.send(result);
         });
-        //post a review
-        app.post('/review/:id', verifyToken, async (req, resp) => {
-            const id = req.params.id;
-            const { email, name, comment, rating } = req.body;
-            // console.log(id, email, name, comment, rating);
-            const result = await products.updateOne({ _id: new ObjectId(id) }, { $push: { "reviews": req.body } }
-            );
-            resp.send(result);
-        });
-        //post report
-        app.post('/report', verifyToken, async (req, resp) => {
-            const report = req.body;
-            const result = await reports.insertOne(report);
-            resp.send(result);
-        });
+
 
         //intend a payment
         app.post('/payment-intent', async (req, resp) => {
