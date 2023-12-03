@@ -48,6 +48,12 @@ async function run() {
                 next();
             });
         };
+        const isModerator = async (req, resp, next) => {
+            const { email } = req.decoded;
+            const {role} = await users.findOne({email:email});
+            if (role === "Moderator") return resp.status(403).send({ message: 'Forbidden Access' });
+            next();
+        };
         //jwt
         app.post('/jwt', async (req, resp) => {
             const user = req?.body;
@@ -66,7 +72,7 @@ async function run() {
         app.get('/user', async (req, resp) => {
             const { email } = req.query;
             const result = await users.findOne({ email: email });
-            console.log(result);
+            // console.log(result);
             resp.send(result);
         });
         //add/post a user
@@ -75,11 +81,11 @@ async function run() {
             const result = await users.insertOne(user);
             resp.send(result);
         });
-        //get user role
+        //update user role
         app.patch('/user', verifyToken, async (req, resp) => {
             const { email, role, t_id } = req.body;
             const result = await users.updateOne({ email: email }, {
-                $set: { role: role, t_id: t_id } 
+                $set: { role: role, t_id: t_id }
             });
             resp.send(result);
         });
@@ -139,7 +145,7 @@ async function run() {
             resp.send(result);
         });
         //update a product
-        app.patch('/product/update/:id', async (req, resp) => {
+        app.patch('/product/update/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
             const { name, image, tags, upvotes, downvotes, description, reviews, posted, link, ownerName, ownerPhotoURL, ownerEmail, featured, status } = req.body;
 
@@ -161,13 +167,13 @@ async function run() {
             resp.send(result)
         });
         //delete a product
-        app.delete('/product/:id', async (req, resp) => {
+        app.delete('/product/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
             const result = await products.deleteOne({ _id: new ObjectId(id) });
             resp.send(result);
         });
         //post a review
-        app.post('/review/:id', async (req, resp) => {
+        app.post('/review/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
             const { email, name, comment, rating } = req.body;
             // console.log(id, email, name, comment, rating);
@@ -176,7 +182,7 @@ async function run() {
             resp.send(result);
         });
         //post report
-        app.post('/report', async (req, resp) => {
+        app.post('/report', verifyToken, async (req, resp) => {
             const report = req.body;
             const result = await reports.insertOne(report);
             resp.send(result);
