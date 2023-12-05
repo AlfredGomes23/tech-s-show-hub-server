@@ -127,25 +127,25 @@ async function run() {
         });
         //get trading products
         app.get('/trending', async (req, resp) => {
-            const result = await products.aggregate([
-                {   //add a counter field
-                    $addFields: {
-                        upvoteCount: {
-                            $cond: { //condition to handle empty arrays
-                                if: { $isArray: "$upvoltes" },
-                                then: { $size: "$upvoltes" },
-                                else: 0
+                const result = await products.aggregate([
+                    {   //add a counter field
+                        $addFields: {
+                            upvoteCount: {
+                                $cond: { //condition to handle empty arrays
+                                    if: { $isArray: "$upvotes" },
+                                    then: { $size: "$upvotes" },
+                                    else: 0
+                                }
                             }
                         }
+                    },
+                    {//sort by count
+                        $sort: { upvoteCount: -1 }
+                    },
+                    {// remove counter from product object
+                        $project: { upvoteCount: 0 }
                     }
-                },
-                {//sort by count
-                    $sort: { upvoteCount: -1 }
-                },
-                {// remove counter from product object
-                    $project: { upvoteCount: 0 }
-                }
-            ]).limit(6).toArray();
+                ]).limit(6).toArray();
             resp.send(result);
         });
         //get a product
