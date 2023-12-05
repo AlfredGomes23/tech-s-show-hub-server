@@ -9,7 +9,7 @@ const stripe = require('stripe')(process.env.SUPER_SECRET);                 //st
 //middleware
 app.use(express.json());
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'https://dazzling-chimera-e53bd5.netlify.app', 'https://tech-s-show-hub.web.app', 'https://tech-s-show-hub.firebaseapp.com'],
     credentials: true
 }));
 
@@ -28,13 +28,13 @@ const client = new MongoClient(process.env.DB_URI, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
 
         //db collections
         const users = client.db("tech's-show-hub").collection('users');
         const products = client.db("tech's-show-hub").collection('products');
-        const reports = client.db("tech's-show-hub").collection('reports');
+        const coupons = client.db("tech's-show-hub").collection('coupons');
 
 
         //custom middlewares
@@ -60,6 +60,8 @@ async function run() {
             if (role !== "Admin") return resp.status(403).send({ message: 'Forbidden Access' });
             next();
         };
+
+
         //jwt
         app.post('/jwt', async (req, resp) => {
             const user = req?.body;
@@ -68,9 +70,9 @@ async function run() {
         });
 
 
+
         //get all users
-        app.get('/users', verifyToken, async (req, resp) => {
-            //TODO:verify admin
+        app.get('/users', verifyToken, isAdmin, async (req, resp) => {
             const result = await users.find().toArray();
             resp.send(result);
         });
@@ -78,11 +80,10 @@ async function run() {
         app.get('/user', async (req, resp) => {
             const { email } = req.query;
             const result = await users.findOne({ email: email });
-            // console.log(result);
             resp.send(result);
         });
         //add/post a user
-        app.post('/user', async (req, resp) => {
+        app.post('/user', verifyToken, async (req, resp) => {
             const user = req.body;
             const result = await users.insertOne(user);
             resp.send(result);
@@ -127,9 +128,15 @@ async function run() {
         //get trading products
         app.get('/trending', async (req, resp) => {
             const result = await products.aggregate([
-                {//add counter field in each product
+                {   //add a counter field
                     $addFields: {
-                        upvoteCount: { $size: "$upvotes" }
+                        upvoteCount: {
+                            $cond: { //condition to handle empty arrays
+                                if: { $isArray: "$upvoltes" },
+                                then: { $size: "$upvoltes" },
+                                else: 0
+                            }
+                        }
                     }
                 },
                 {//sort by count
@@ -145,7 +152,6 @@ async function run() {
         app.get('/product/:id', async (req, resp) => {
             const id = req.params.id;
             const result = await products.findOne({ _id: new ObjectId(id) });
-            // console.log(result);
             resp.send(result);
         });
         //get a users products
@@ -155,19 +161,18 @@ async function run() {
             resp.send(result);
         });
         //get pending products
-        app.get('/pending-products', async (req, resp) => {
+        app.get('/pending-products', verifyToken, isModerator, async (req, resp) => {
             const result = await products.find({ "status": { $in: ["Pending", "Rejected"] } }).sort({ posted: -1 }).toArray();
             resp.send(result);
         });
         //get all reported products
-        app.get('/reported-products', async (req, resp) => {
+        app.get('/reported-products', verifyToken, isModerator, async (req, resp) => {
             const result = await products.find({ "reported": true }).toArray();
             resp.send(result)
         });
         //post a product
         app.post('/product', verifyToken, async (req, resp) => {
             const product = req.body;
-            // console.log(product);
             const result = await products.insertOne(product);
             if (result) await users.updateOne({ email: product.ownerEmail }, { $inc: { limit: -1 } });
             resp.send(result);
@@ -176,7 +181,6 @@ async function run() {
         app.post('/review/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
             const { email, name, comment, rating } = req.body;
-            // console.log(id, email, name, comment, rating);
             const result = await products.updateOne({ _id: new ObjectId(id) }, { $push: { "reviews": req.body } }
             );
             resp.send(result);
@@ -209,13 +213,11 @@ async function run() {
                 {
                     $push: { [vote]: email }
                 });
-            // console.log(result);
             resp.send(result)
         });
         //report a product
         app.patch('/report/:id', verifyToken, async (req, resp) => {
             const id = req.params.id;
-            console.log(id);
             const result = await products.updateOne({ _id: new ObjectId(id) },
                 { $set: { "reported": true } });
             resp.send(result);
@@ -225,10 +227,10 @@ async function run() {
             const id = req.params.id;
             const { ownerEmail } = await products.findOne({ _id: new ObjectId(id) });
             const result = await products.deleteOne({ _id: new ObjectId(id) });
-            // console.log(ownerEmail, result);
             if (result) await users.updateOne({ email: ownerEmail }, { $inc: { limit: 1 } });
             resp.send(result);
         });
+
 
 
         //intend a payment
@@ -247,13 +249,55 @@ async function run() {
 
 
 
+        //get stats
+        app.get('/admin-stats', verifyToken, isAdmin, async (req, resp) => {
+            const usersCount = await users.estimatedDocumentCount();
+            const productsCount = await products.estimatedDocumentCount();
+            const [{ totalReviews }] = await products.aggregate([
+                {
+                    $project: { totalReview: { $size: "$reviews" } }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalReviews: { $sum: "$totalReview" }
+                    }
+                }
+            ]).toArray();
+            resp.send([
+                { name: "Products", value: productsCount },
+                { name: "Reviews", value: totalReviews },
+                { name: "Users", value: usersCount }
+            ]);
+        });
 
-
+        //get all coupons
+        app.get('/coupons', async (req, resp) => {
+            const result = await coupons.find().toArray();
+            resp.send(result);
+        });
+        //add a coupon
+        app.post('/coupon', verifyToken, isAdmin, async (req, resp) => {
+            const result = await coupons.insertOne(req.body);
+            resp.send(result);
+        });
+        //update a coupon
+        app.patch('/coupon/:id', async (req, resp) => {
+            const id = req.params.id;
+            const result = await coupons.updateOne({ _id: new ObjectId(id) }, { $set: req.body });
+            resp.send(result);
+        });
+        //delete a coupon
+        app.delete('/coupon/:id', verifyToken, isAdmin, async (req, resp) => {
+            const id = req.params.id;
+            const result = await coupons.deleteOne({ _id: new ObjectId(id) });
+            resp.send(result);
+        });
 
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
