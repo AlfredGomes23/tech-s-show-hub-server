@@ -107,19 +107,21 @@ async function run() {
 
         //get products count
         app.get('/productsCount', async (req, resp) => {
-            const count = await products.estimatedDocumentCount();
+            const { tag } = req.query;
+            let count = 0;
+            if (tag) count = await products.countDocuments({ "status": "Accepted", tags: { $regex: new RegExp(tag, 'i') } }); 
+            else count = await products.countDocuments({ "status": "Accepted" });
             resp.send({ count });
         });
         //get all products
         app.get('/products', async (req, resp) => {
             const { page, limit, search } = req.query;
 
-            let result = await products.find({ "status": "Accepted", tags: { $in: [search] } })
+            let result = await products.find({ "status": "Accepted", tags: { $regex: new RegExp(search, 'i') } })
                 .sort({ posted: -1 })
                 .skip(+page * +limit)
                 .limit(+limit)
                 .toArray();
-
             //if any of tag didn't matched then send all 
             if (result.length === 0) result = await products.find({ "status": "Accepted" }).sort({ posted: -1 }).skip(+page * +limit).limit(+limit).toArray();
 
@@ -127,25 +129,25 @@ async function run() {
         });
         //get trading products
         app.get('/trending', async (req, resp) => {
-                const result = await products.aggregate([
-                    {   //add a counter field
-                        $addFields: {
-                            upvoteCount: {
-                                $cond: { //condition to handle empty arrays
-                                    if: { $isArray: "$upvotes" },
-                                    then: { $size: "$upvotes" },
-                                    else: 0
-                                }
+            const result = await products.aggregate([
+                {   //add a counter field
+                    $addFields: {
+                        upvoteCount: {
+                            $cond: { //condition to handle empty arrays
+                                if: { $isArray: "$upvotes" },
+                                then: { $size: "$upvotes" },
+                                else: 0
                             }
                         }
-                    },
-                    {//sort by count
-                        $sort: { upvoteCount: -1 }
-                    },
-                    {// remove counter from product object
-                        $project: { upvoteCount: 0 }
                     }
-                ]).limit(6).toArray();
+                },
+                {//sort by count
+                    $sort: { upvoteCount: -1 }
+                },
+                {// remove counter from product object
+                    $project: { upvoteCount: 0 }
+                }
+            ]).limit(6).toArray();
             resp.send(result);
         });
         //get a product
